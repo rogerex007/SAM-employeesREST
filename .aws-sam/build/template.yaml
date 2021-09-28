@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'microservices
+
+  Sample SAM Template for microservices
+
+  '
+Parameters:
+  Stage:
+    Type: String
+    Default: DEV
+Globals:
+  Function:
+    Runtime: nodejs14.x
+    Timeout: 30
+    MemorySize: 128
+    Environment:
+      Variables:
+        EMPLOYEED_TABLE_NAME:
+          Ref: EmployeedTable
+  Api:
+    Cors:
+      AllowMethods: '''PUT,GET,POST,DELETE, OPTIONS'''
+      AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,x-requested-with'''
+      AllowOrigin: '''*'''
+      AllowCredentials: false
+Resources:
+  EmployeedApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName:
+        Ref: Stage
+      Auth:
+        AddDefaultAuthorizerToCorsPreflight: false
+  EmployeedTable:
+    Type: AWS::Serverless::SimpleTable
+  SaveEmployeed:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: SaveEmployeed
+      Timeout: 600
+      Handler: app.saveEmployeed
+      Policies:
+      - AWSLambdaExecute
+      - DynamoDBWritePolicy:
+          TableName:
+            Ref: EmployeedTable
+      Events:
+        AddEmployeesEvent:
+          Type: Api
+          Properties:
+            Path: /Employees/saveEmployee
+            Method: post
+            RestApiId:
+              Ref: EmployeedApi
+  ReadEmployeed:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ReadEmployeed
+      Timeout: 600
+      Handler: app.readEmployeed
+      Policies:
+      - AWSLambdaExecute
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: EmployeedTable
+      Events:
+        AddEmployeesEvent:
+          Type: Api
+          Properties:
+            Path: /Employees/getEmployee/{id}
+            Method: get
+            RestApiId:
+              Ref: EmployeedApi
+  ReadEmployees:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ReadEmployees
+      Timeout: 600
+      Handler: app.readEmployees
+      Policies:
+      - AWSLambdaExecute
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: EmployeedTable
+      Events:
+        AddEmployeesEvent:
+          Type: Api
+          Properties:
+            Path: /Employees/getEmployees
+            Method: get
+            RestApiId:
+              Ref: EmployeedApi
+Outputs:
+  HelloWorldApi:
+    Description: API Gateway endpoint URL for Prod stage for Hello World function
+    Value:
+      Fn::Sub: https://${EmployeedApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/Employees/
